@@ -1,0 +1,563 @@
+/* ── Gestaltungsvariablen ────────────────────────────────────────────────
+   Grundfläche ist ein tiefes Indigo statt Reinschwarz, damit die hellen
+   OSM-Kacheln als Fenster zur Erde wirken. Einziger lauter Akzent ist
+   Solarzellen-Gold – die Farbe der echten ISS-Paneele.                   */
+
+:root {
+  color-scheme: dark;
+
+  --space: #0e1420;
+  --panel: #151e2c;
+  --panel-2: #1c2739;
+  --rule: #27334a;
+  --ink: #e9eef6;
+  --ink-dim: #8695ad;
+  /* Vorher #5c6a81 – das erreichte auf dem Panel nur 3,1:1. Die Fußzeile und
+     die leisen Hinweise waren damit für viele schwer zu lesen. */
+  --ink-faint: #7c8aa3;
+  --solar: #e8a33d;
+  --eclipsed: #6e93d6;
+  --alert: #e4674f;
+
+  /* Fläche hinter und neben den Kacheln. */
+  --map-void: #0a101b;
+
+  /* Abgeleitete Werte, die vorher als Alpha-Zahl im Code standen. */
+  --marker-ring: rgba(14, 20, 32, 0.9);
+  --marker-glow: rgba(232, 163, 61, 0.85);
+  --solar-soft: rgba(232, 163, 61, 0.16);
+  --eclipsed-soft: rgba(110, 147, 214, 0.16);
+  --alert-ring: rgba(228, 103, 79, 0.4);
+  --alert-soft: rgba(228, 103, 79, 0.1);
+  --alert-border: rgba(228, 103, 79, 0.35);
+  --shadow: rgba(0, 0, 0, 0.45);
+
+  /* Deckend genug, dass die Attribution auch über hellen Kacheln lesbar
+     bleibt – bei 0,78 waren es nur rund 3:1. */
+  --attribution-bg: rgba(14, 20, 32, 0.92);
+
+  --radius: 6px;
+  --gutter: 20px;
+}
+
+/* ── Helles Erscheinungsbild ──────────────────────────────────────────────
+   `:root[data-theme=…]` statt nur `[data-theme=…]`: Das Attribut setzt ein
+   Skript vor dem ersten Anstrich (siehe app/layout.js). Ohne JavaScript
+   bleibt es beim dunklen Satz oben – vertretbar, weil die App ohne
+   JavaScript ohnehin nichts anzeigt.
+
+   Der Grund ist bewusst kein Reinweiß: Die OSM-Kacheln sind ein warmes Weiß,
+   die Oberfläche würde darin verschwimmen.                                            */
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --space: #e6e9ee;
+  --panel: #f8f9fb;
+  --panel-2: #eef0f4;
+  --rule: #d3d8e0;
+  --ink: #16202e;
+  --ink-dim: #55617a;
+  --ink-faint: #616c80;
+
+  /* Auf hellem Grund zu schwach: #e8a33d kommt auf ~2,2:1, #6e93d6 auf
+     ~3,1:1. Beide sind hier so weit abgedunkelt, dass sie 4,5:1 erreichen. */
+  --solar: #9a6410;
+  --eclipsed: #35589e;
+  --alert: #b23a22;
+
+  --map-void: #dfe3ea;
+
+  --marker-ring: rgba(255, 255, 255, 0.92);
+  --marker-glow: rgba(154, 100, 16, 0.5);
+  --solar-soft: rgba(154, 100, 16, 0.14);
+  --eclipsed-soft: rgba(53, 88, 158, 0.14);
+  --alert-ring: rgba(178, 58, 34, 0.4);
+  --alert-soft: rgba(178, 58, 34, 0.08);
+  --alert-border: rgba(178, 58, 34, 0.32);
+  --shadow: rgba(22, 32, 46, 0.18);
+  --attribution-bg: rgba(248, 249, 251, 0.9);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--space);
+  color: var(--ink);
+  font-family: var(--font-ui, system-ui, sans-serif);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(a, button, input, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--solar);
+  outline-offset: 2px;
+}
+
+/* ── Grundgerüst ───────────────────────────────────────────────────────── */
+
+.app {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 13px var(--gutter);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Statusanzeige und Umschalter stehen rechts beieinander – bei schmalen
+   Bildschirmen rutschen sie gemeinsam in eine zweite Zeile, statt die
+   Kopfzeile waagerecht zu sprengen. */
+.masthead__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand__mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  color: var(--ink);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Als Klasse statt als `fill="var(--solar)"` am Element: CSS-Variablen in
+   SVG-Präsentationsattributen werden nicht überall verlässlich ausgewertet. */
+.brand__accent {
+  fill: var(--solar);
+}
+
+/* ── Umschalter für das Erscheinungsbild ───────────────────────────────── */
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.field__label {
+  font-size: 0.8125rem;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.field__select {
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+/* ── Verbindungsanzeige ────────────────────────────────────────────────── */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 5px 13px 5px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.status__dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.status--live {
+  color: var(--ink);
+}
+
+.status--live .status__dot {
+  background: var(--solar);
+  animation: status-pulse 2.6s ease-in-out infinite;
+}
+
+.status--pending .status__dot {
+  animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+.status--offline {
+  color: var(--alert);
+  border-color: var(--alert-ring);
+}
+
+.status--offline .status__dot {
+  background: var(--alert);
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ── Karte und Panel ───────────────────────────────────────────────────── */
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.map-frame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--map-void);
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.map-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+}
+
+.panel {
+  min-height: 0;
+  padding: 0 var(--gutter) 28px;
+  overflow-y: auto;
+  background: var(--panel);
+  border-left: 1px solid var(--rule);
+}
+
+/* ── Messwerte ─────────────────────────────────────────────────────────── */
+
+.readouts {
+  margin: 0;
+  padding-top: 12px;
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 14px;
+  padding: 9px 0;
+}
+
+.readout + .readout {
+  border-top: 1px solid var(--rule);
+}
+
+.readout dt {
+  font-size: 0.8125rem;
+  color: var(--ink-dim);
+}
+
+.readout dd {
+  margin: 0;
+  justify-self: end;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* Breite und Länge bestimmen die Position – sie stehen deshalb größer. */
+.readout--lead {
+  padding: 12px 0;
+}
+
+.readout--lead dd {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.condition {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  font-size: 0.875rem;
+}
+
+.condition__dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.condition--sunlit .condition__dot {
+  background: var(--solar);
+  box-shadow: 0 0 0 3px var(--solar-soft);
+}
+
+.condition--eclipsed .condition__dot {
+  background: var(--eclipsed);
+  box-shadow: 0 0 0 3px var(--eclipsed-soft);
+}
+
+/* ── Bedienelemente ────────────────────────────────────────────────────── */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 0;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  cursor: pointer;
+  accent-color: var(--solar);
+}
+
+/* ── Besatzung ─────────────────────────────────────────────────────────── */
+
+.block {
+  padding: 18px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.block__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.block__meta {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.crew {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crew li {
+  padding: 7px 0;
+  font-size: 0.9375rem;
+}
+
+.crew li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+}
+
+.notice {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--alert-border);
+  border-radius: var(--radius);
+  background: var(--alert-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.panel__foot {
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+/* ── Leaflet an die Oberfläche anpassen ────────────────────────────────── */
+
+/* Spezifität nötig: Leaflets eigenes Stylesheet setzt `.leaflet-container`
+   auf #ddd und wird nach dieser Datei geladen – bei gleicher Spezifität
+   gewinnt es. Mit dem zusätzlichen Vorfahren greift der eigene Ton. */
+.map-frame .leaflet-container {
+  background: var(--map-void);
+  font-family: inherit;
+}
+
+/* Attribution ist Lizenzpflicht von OpenStreetMap – sie bleibt sichtbar. */
+.leaflet-control-attribution {
+  padding: 2px 7px;
+  background: var(--attribution-bg) !important;
+  color: var(--ink-dim) !important;
+  font-size: 11px;
+}
+
+.leaflet-control-attribution a {
+  color: var(--ink-dim) !important;
+}
+
+/* Spezifität über Leaflets eigenem Stylesheet: das wird nach dieser Datei
+   geladen und würde bei gleicher Spezifität sonst gewinnen. */
+.leaflet-container .leaflet-bar {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.leaflet-container .leaflet-bar a {
+  background: var(--panel);
+  color: var(--ink);
+  border-bottom-color: var(--rule);
+}
+
+.leaflet-container .leaflet-bar a:hover {
+  background: var(--panel-2);
+  color: var(--solar);
+}
+
+.iss-marker {
+  background: none;
+  border: 0;
+}
+
+.iss-marker__halo,
+.iss-marker__dot {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.iss-marker__halo {
+  inset: 0;
+  background: var(--solar);
+  animation: halo 3.2s ease-out infinite;
+}
+
+.iss-marker__dot {
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: var(--solar);
+  box-shadow:
+    0 0 0 2px var(--marker-ring),
+    0 0 12px var(--marker-glow);
+}
+
+@keyframes halo {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.4;
+  }
+  70%,
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* ── Schmale Bildschirme: Karte oben, Panel darunter ───────────────────── */
+
+@media (max-width: 900px) {
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .map-frame {
+    height: 58dvh;
+  }
+
+  .panel {
+    overflow: visible;
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+}
+
+/* Auf schmalen Bildschirmen ist in der Kopfzeile kein Platz für die
+   Beschriftung. Sie wird nicht entfernt, sondern nur unsichtbar – sonst
+   hätte das Auswahlfeld für Screenreader keinen Namen mehr. */
+@media (max-width: 560px) {
+  .field__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

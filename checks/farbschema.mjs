@@ -34,6 +34,19 @@ function contrastRatio(fg, bg) {
 
 const WHITE = { r: 255, g: 255, b: 255 };
 
+/** Farbe aus `#rrggbb` oder `rgb(…)`/`rgba(…)` als Zahlenpaar. */
+function parseColor(value) {
+  const hex = /^#([\da-f]{6})$/i.exec(value.trim());
+  if (hex) {
+    const packed = parseInt(hex[1], 16);
+    return { r: (packed >> 16) & 255, g: (packed >> 8) & 255, b: packed & 255 };
+  }
+  const parts = value.match(/[\d.]+/g)?.map(Number) ?? [];
+  return { r: parts[0] ?? 0, g: parts[1] ?? 0, b: parts[2] ?? 0 };
+}
+
+const sameColor = (a, b) => a.r === b.r && a.g === b.g && a.b === b.b;
+
 /**
  * Farben von Vordergrund und Untergrund eines Elements.
  *
@@ -298,6 +311,59 @@ export const checks = [
         throw new Error(`mehrfach vergeben: ${duplicates.join(", ")}`);
       }
       return "alle IDs eindeutig";
+    },
+  },
+  {
+    // Anlass: Die Flugspur trug ihre Farbe als JavaScript-Konstante
+    // (`#E8A33D`) und behielt sie im hellen Modus bei – gemessen 2,2:1 auf
+    // einer OSM-Kachel, also unter dem Mindestwert für Flächen und Linien.
+    // Seitdem kommt sie als `.iss-track` aus `--solar`. Diese Prüfung hält
+    // beides fest: dass die Variable wirklich ankommt und dass der helle Wert
+    // lesbar ist.
+    name: "H9 Flugspur folgt dem Erscheinungsbild",
+    async run(page) {
+      // Die Spur entsteht erst mit dem zweiten Messwert, also nach bis zu
+      // zwei Polling-Runden – der letzte Neuladen davor war H4.
+      // `attached`, nicht `visible`: Eine frische Spur aus zwei dicht
+      // beieinanderliegenden Punkten ist eine waagerechte Linie ohne Höhe,
+      // und Playwright hält Elemente ohne Fläche für unsichtbar. Auf
+      // Sichtbarkeit zu warten macht die Prüfung davon abhängig, wie weit die
+      // ISS in den ersten Sekunden gezogen ist.
+      await page.waitForSelector(".iss-track", { state: "attached", timeout: 30000 });
+
+      const read = () =>
+        page.evaluate(() => ({
+          stroke: getComputedStyle(document.querySelector(".iss-track")).stroke,
+          token: getComputedStyle(document.documentElement).getPropertyValue("--solar").trim(),
+        }));
+
+      const seen = {};
+      for (const theme of ["light", "dark"]) {
+        await selectTheme(page, theme);
+        const { stroke, token } = await read();
+        if (!sameColor(parseColor(stroke), parseColor(token))) {
+          throw new Error(
+            `${theme}: Spur ist ${stroke}, --solar aber ${token} – die Variable kommt nicht an`,
+          );
+        }
+        seen[theme] = { stroke, color: parseColor(stroke) };
+      }
+
+      if (sameColor(seen.light.color, seen.dark.color)) {
+        throw new Error(`Spur bleibt in beiden Sätzen ${seen.light.stroke}`);
+      }
+
+      // Die Kacheln sind in beiden Modi dieselben und nahezu weiß. Für den
+      // hellen Satz ist Weiß damit der ungünstigste Fall – und genau der, an
+      // dem die alte Konstante scheiterte.
+      const againstTiles = contrastRatio(seen.light.color, WHITE);
+      if (againstTiles < 3) {
+        throw new Error(
+          `helle Spur nur ${againstTiles.toFixed(1)}:1 auf heller Kachel (nötig 3:1)`,
+        );
+      }
+
+      return `hell ${seen.light.stroke} (${againstTiles.toFixed(1)}:1 auf Kachel), dunkel ${seen.dark.stroke}`;
     },
   },
 ];

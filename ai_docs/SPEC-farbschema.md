@@ -244,9 +244,9 @@ Von Hand (Phase 3, Punkt 5):
 
 ## 10. Nachtrag nach dem Einbau
 
-Sechs Stellen wichen von dieser Spec ab oder kamen hinzu. Alle sechs kamen aus
-dem Prüflauf, nicht aus dem Nachdenken. Die sechste gehört nicht zum Thema,
-sondern fiel beim Prüfen hindurch auf.
+Sieben Stellen wichen von dieser Spec ab oder kamen hinzu. Alle sieben kamen
+aus dem Prüflauf, nicht aus dem Nachdenken. Die sechste und die siebte gehören
+nicht zum Thema, sondern fielen beim Prüfen hindurch auf.
 
 **1 · `:root[data-theme="light"]` statt `[data-theme="light"]`.**
 Beide Selektoren haben dieselbe Spezifität wie `:root`. Es entschiede die
@@ -297,3 +297,27 @@ um 30 s verzögerten API schickt die App jetzt alle ~13 s eine neue Abfrage
 und zeigt dabei ehrlich „Keine Verbindung“ statt „Live“. Neuer Katalogpunkt
 **C6**. Mit dem Thema hat das nichts zu tun — es lag seit der ersten Version
 drin; H1–H8 waren in jedem Lauf grün.
+
+**7 · Die Flugspur trug ihre Farbe als JavaScript-Konstante (Nachtrag).**
+Aufgefallen erst beim Durchsehen gegen die React-Richtlinien von Vercel, nicht
+im Prüflauf: `IssMap.js` setzte die Spurfarbe als `const SOLAR = "#E8A33D"`
+und gab sie als Leaflet-Option mit. §6 hatte für das Logo genau diese Stelle
+schon aufgelöst (`fill="#e8a33d"` → `.brand__accent`), die Spur aber
+übersehen — und die Farbe des dunklen Satzes blieb im hellen Modus stehen:
+gemessen **2,2:1** auf einer OSM-Kachel, unter dem Mindestwert von 3:1 für
+Linien.
+Jetzt heißt die Linie `.iss-track` und holt sich `stroke: var(--solar)` aus
+dem Stylesheet. Leaflet setzt `stroke` als Präsentationsattribut am `<path>`;
+eine CSS-Regel sticht das ohne Spezifitätskunststück, ein `!important` ist
+nicht nötig.
+Neue Prüfung **H9**: Die berechnete Strichfarbe muss in beiden Sätzen der
+Variable `--solar` entsprechen und sich zwischen ihnen unterscheiden; hell
+zusätzlich mindestens 3:1 gegen Weiß — die Kacheln sind in beiden Modi
+dieselben und nahezu weiß, Weiß ist also der ungünstigste Fall. Ergebnis
+hell **5,0:1**. Gegenprobe: mit einem festen Wert im Stylesheet wird H9 rot
+(„die Variable kommt nicht an").
+Nebenbei fiel an H9 ein zu strenger Wartebedingung auf: `waitForSelector`
+verlangt ohne `state: "attached"` Sichtbarkeit, und eine frische Spur aus zwei
+dicht beieinanderliegenden Punkten ist eine waagerechte Linie ohne Höhe.
+Die Prüfung hing damit davon ab, wie weit die ISS in den ersten Sekunden
+gezogen war.

@@ -18,6 +18,7 @@ import {
   formatLatitude,
   formatLongitude,
   formatVelocity,
+  nextPollDelay,
   normalizeReading,
   unwrapLongitude,
 } from "./lib/iss";
@@ -38,6 +39,27 @@ const STATUS = {
   offline: { label: "Keine Verbindung", tone: "offline" },
 };
 
+// Das Logo ist unbeweglich, wird aber bei jedem Render neu erzeugt – und die
+// Seite rendert alle fünf Sekunden. Einmal außerhalb der Komponente gebaut,
+// reicht React bei jedem Durchlauf dasselbe Element weiter.
+const brandMark = (
+  <svg className="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+    <ellipse
+      cx="16"
+      cy="16"
+      rx="13"
+      ry="5.4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      opacity="0.45"
+      transform="rotate(-28 16 16)"
+    />
+    <circle cx="16" cy="16" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.9" />
+    <circle className="brand__accent" cx="27" cy="8.6" r="2.7" />
+  </svg>
+);
+
 export default function Page() {
   const [reading, setReading] = useState(null);
   const [connection, setConnection] = useState("connecting");
@@ -57,6 +79,7 @@ export default function Page() {
     let timer;
 
     async function poll() {
+      const startedAt = Date.now();
       try {
         // Die Zeitgrenze macht aus einer zähen Antwort einen Fehler statt
         // einer Blockade: Der `finally`-Zweig plant sonst erst dann die
@@ -86,7 +109,9 @@ export default function Page() {
         // erholt sich von selbst, sobald die API wieder antwortet.
         if (!cancelled) setConnection("offline");
       } finally {
-        if (!cancelled) timer = setTimeout(poll, POLL_MS);
+        // Ab dem Start gerechnet: Sonst verlängert jede zähe Antwort den Takt
+        // um ihre eigene Dauer (siehe `nextPollDelay`).
+        if (!cancelled) timer = setTimeout(poll, nextPollDelay(startedAt, POLL_MS));
       }
     }
 
@@ -104,6 +129,7 @@ export default function Page() {
     let timer;
 
     async function loadCrew() {
+      const startedAt = Date.now();
       try {
         // Dieselbe Zeitgrenze: Auch diese Schleife plant erst im `finally`
         // die nächste Abfrage.
@@ -118,7 +144,7 @@ export default function Page() {
       } catch {
         if (!cancelled) setCrew("error");
       } finally {
-        if (!cancelled) timer = setTimeout(loadCrew, CREW_POLL_MS);
+        if (!cancelled) timer = setTimeout(loadCrew, nextPollDelay(startedAt, CREW_POLL_MS));
       }
     }
 
@@ -140,21 +166,7 @@ export default function Page() {
     <div className="app">
       <header className="masthead">
         <div className="brand">
-          <svg className="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
-            <ellipse
-              cx="16"
-              cy="16"
-              rx="13"
-              ry="5.4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              opacity="0.45"
-              transform="rotate(-28 16 16)"
-            />
-            <circle cx="16" cy="16" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.9" />
-            <circle className="brand__accent" cx="27" cy="8.6" r="2.7" />
-          </svg>
+          {brandMark}
           <h1>ISS Live-Tracker</h1>
         </div>
 

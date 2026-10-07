@@ -6,8 +6,6 @@ import "leaflet/dist/leaflet.css";
 
 import { INITIAL_ZOOM } from "../lib/iss";
 
-const SOLAR = "#E8A33D";
-
 /**
  * Leaflet-Karte mit ISS-Marker und Flugspur.
  *
@@ -111,7 +109,11 @@ export default function IssMap({ position, track, follow, onUserDrag }) {
         L.polyline(
           track.map((point) => [point.lat, point.lng]),
           {
-            color: SOLAR,
+            // Die Farbe steht nicht hier, sondern als `.iss-track` im
+            // Stylesheet: Als JavaScript-Konstante hätte die Spur den
+            // dunklen Goldton auch im hellen Modus behalten und wäre auf
+            // hellem Grund kaum zu sehen gewesen.
+            className: "iss-track",
             weight: 2,
             opacity: 0.6,
             lineJoin: "round",

@@ -471,6 +471,13 @@ body {
   color: var(--solar);
 }
 
+/* Wie beim Logo: die Farbe kommt aus dem Stylesheet, nicht aus einer
+   JavaScript-Konstante. Leaflet setzt `stroke` als Präsentationsattribut am
+   <path> – eine CSS-Regel sticht das ohne Spezifitätskunststück. */
+.iss-track {
+  stroke: var(--solar);
+}
+
 .iss-marker {
   background: none;
   border: 0;

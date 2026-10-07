@@ -20,6 +20,23 @@ export const POLL_MS = 5000;
    Verbindung in Ordnung ist. */
 export const REQUEST_TIMEOUT_MS = 8000;
 
+/**
+ * Wartezeit bis zur nächsten Abfrage.
+ *
+ * Gemessen ab dem *Start* der vorigen, nicht ab ihrem Ende. Sonst schiebt jede
+ * zähe Antwort die ganze Kette um ihre eigene Dauer nach hinten: Läuft eine
+ * Abfrage in die Zeitgrenze, kostet sie 8 s Abbruch *plus* 5 s Takt – gemessen
+ * 13 s zwischen zwei Versuchen, und in dieser Zeit steht die Anzeige still.
+ * Mit dieser Rechnung startet der nächste Versuch sofort nach dem Abbruch.
+ *
+ * Zwei Abfragen überlappen dabei nie: Die nächste wird erst geplant, wenn die
+ * laufende zurück ist. Der Wert fällt nur dann auf 0, wenn schon zu viel Zeit
+ * vergangen ist – dann ist Aufholen richtig, nicht weiter warten.
+ */
+export function nextPollDelay(startedAt, interval) {
+  return Math.max(0, interval - (Date.now() - startedAt));
+}
+
 /** So viele Positionen zeichnet die Flugspur (bei 5 s Takt ca. 10 Minuten). */
 export const MAX_TRACK_POINTS = 120;
 

@@ -1,3 +1,4 @@
+import { preconnect } from "react-dom";
 import Script from "next/script";
 import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 
@@ -33,6 +34,14 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }) {
+  // Beide Ziele werden unmittelbar nach dem ersten Bild gebraucht: die Kacheln
+  // für die Karte, die API für den ersten Messwert. Ohne den Hinweis beginnt
+  // der Verbindungsaufbau (DNS, TCP, TLS) erst, wenn das JavaScript die erste
+  // Anfrage stellt – bei einer Seite, die aus fast nichts als diesen beiden
+  // Verbindungen besteht, ist das der längste Posten der Ladezeit.
+  preconnect("https://tile.openstreetmap.org");
+  preconnect("https://api.wheretheiss.at");
+
   return (
     // `suppressHydrationWarning` ist hier kein Trick, sondern der dafür
     // vorgesehene Weg: Das Skript unten setzt `data-theme` am <html>, bevor

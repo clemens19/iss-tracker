@@ -94,6 +94,23 @@ Die Zeitgrenze macht aus der Blockade einen Fehler, den C2 und C3 auffangen.
 A3 verlangt dasselbe für Route Handler; für die Abfrage direkt aus dem
 Browser galt es bisher nicht.
 
+**C7 · Der Takt wird ab dem Start gemessen, nicht ab dem Ende.**
+C6 allein genügt nicht. Wird die nächste Abfrage im `finally` um den vollen
+Takt verschoben, verlängert jede zähe Antwort die Kette um ihre eigene Dauer:
+Eine Abfrage, die in die Zeitgrenze läuft, kostet 8 s Abbruch **plus** 5 s
+Takt — gemessen **13 s** zwischen zwei Versuchen statt 5 s. Die Anzeige steht
+dann still, obwohl die Verbindung in Ordnung ist.
+Richtig ist `Math.max(0, TAKT − (jetzt − Start))`: Bei flotter Antwort bleibt
+der Takt bei 5 s, nach einem Abbruch startet der nächste Versuch sofort.
+Überlappen können sich die Anfragen dabei nicht — die nächste wird weiterhin
+erst geplant, wenn die laufende zurück ist (C1).
+Gegenprobe mit einer künstlich um 30 s verzögerten API: vorher 13 s,
+nachher 8,0 s zwischen zwei Versuchen; der Status zeigt dabei durchgehend
+ehrlich „Keine Verbindung“.
+**Warum das auffiel:** T5 („Anzeige aktualisiert sich binnen 12 s“) wurde
+rot, sobald die API ein einziges Mal hängen blieb — 13 s > 12 s. Eine Prüfung,
+die bei jedem Ausrutscher der Gratis-API umfällt, verliert ihren Wert.
+
 ---
 
 ## D — Karte und Geografie

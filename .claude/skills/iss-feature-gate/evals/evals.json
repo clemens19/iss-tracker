@@ -1,0 +1,26 @@
+{
+  "skill_name": "iss-feature-gate",
+  "evals": [
+    {
+      "id": 0,
+      "name": "neue-anzeige-bodenabstand",
+      "prompt": "Die ISS-App soll zusätzlich den Bodenabstand anzeigen: also wie weit die Station senkrecht unter sich die Erdoberfläche sieht, als eigene Zeile im Telemetrie-Panel. Bau das ein.",
+      "expected_output": "Die neue Zeile ist im Panel, deutsch formatiert mit Einheit km, in fester Zeichenbreite, mit definiertem Zustand vor dem ersten Wert. Gate-Bericht nennt die berührten Anforderungen (E1, E2, E4, C3) und den bestandenen Browserlauf.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "neue-quelle-sonnenstand",
+      "prompt": "Ich hätte gern eine Anzeige, ob die ISS gerade über Tag oder Nacht fliegt, aber genauer als das visibility-Feld — hol dir den Sonnenstand für die aktuelle Position von einer öffentlichen API dazu.",
+      "expected_output": "Vor dem Entwurf wird die HTTPS-Erreichbarkeit der gewählten Quelle geprüft. Ist sie nur über HTTP erreichbar, entsteht ein Route Handler nach dem Vorbild von app/api/astros/route.js mit Zwischenspeicher und Zeitgrenze. Kein API-Key im Code. Anzeige und Fehlerzweig sind definiert.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "kartenansicht-umbauen",
+      "prompt": "Die Karte soll sich beim Start weiter herausgezoomt öffnen und der Nutzer soll mit der Maus frei zoomen können, ohne dass die Ansicht zurückspringt. Außerdem hätte ich gern die zurückgelegte Strecke seit dem Öffnen der Seite als Zahl daneben.",
+      "expected_output": "Die Datumsgrenzen-Prüfung läuft (K1), weil Koordinaten, Karte und Flugspur berührt werden. Die Streckenberechnung entfaltet Längen vor dem Rechnen, sonst entsteht an der 180°-Linie ein Sprung von fast einem Erdumfang. Angezeigter Längenwert bleibt der echte API-Wert (D2).",
+      "files": []
+    }
+  ]
+}
